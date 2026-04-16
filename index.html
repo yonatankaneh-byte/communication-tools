@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כלי ניתוח תקשורת | Communication Analysis Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Assistant', sans-serif; }
+        .tab-active { border-bottom: 4px solid #4f46e5; background: linear-gradient(to bottom, #eef2ff, white); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .ctx-btn, .age-btn { padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s; cursor: pointer; }
+        .ctx-btn:hover, .age-btn:hover { border-color: #818cf8; }
+        .active-ctx, .active-age { border-color: #4f46e5 !important; background: #eef2ff !important; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-indigo-600 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-6">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-indigo-600 p-3 rounded-xl shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-bold text-gray-900">כלי ניתוח תקשורת</h1>
+                        <p class="text-gray-600 text-sm md:text-base">עזרה להבנת הודעות וזיהוי דגלים אדומים</p>
+                    </div>
+                </div>
+                <button onclick="toggleLang()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-4 py-2 rounded-lg font-bold transition-all">
+                    <span id="langBtn">🇬🇧 English</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="max-w-6xl mx-auto px-4 mt-6">
+        <div class="bg-white rounded-t-2xl shadow-xl flex">
+            <button onclick="switchTab('personal')" id="tab-personal" class="flex-1 py-4 px-3 md:px-6 font-bold text-sm md:text-lg tab-active transition-all">
+                ✍️ <span class="tab-text-personal">ניתוח הודעה אישית</span>
+            </button>
+            <button onclick="switchTab('group')" id="tab-group" class="flex-1 py-4 px-3 md:px-6 font-bold text-sm md:text-lg hover:bg-gray-50 transition-all">
+                👥 <span class="tab-text-group">ניתוח שיחה קבוצתית</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Personal Message Analyzer -->
+    <div id="personal-tool" class="max-w-6xl mx-auto px-4 pb-8">
+        <div class="bg-white rounded-b-2xl shadow-xl p-4 md:p-6 space-y-6">
+            
+            <!-- Mode Selection -->
+            <div>
+                <h2 class="text-lg md:text-xl font-bold mb-4 mode-title">מה תרצה לעשות?</h2>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <button onclick="setPersonalMode('mine')" id="btn-mine" class="p-4 md:p-6 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-right transition-all">
+                        <div class="text-3xl md:text-4xl mb-2">✍️</div>
+                        <h3 class="font-bold text-base md:text-lg mb-1 mode-analyze-mine">נתח את ההודעה שלי</h3>
+                        <p class="text-gray-600 text-sm mode-analyze-mine-desc">בדוק טקסט לפני ששולח</p>
+                    </button>
+                    <button onclick="setPersonalMode('theirs')" id="btn-theirs" class="p-4 md:p-6 rounded-xl border-2 border-gray-300 text-right hover:border-indigo-300 transition-all">
+                        <div class="text-3xl md:text-4xl mb-2">📨</div>
+                        <h3 class="font-bold text-base md:text-lg mb-1 mode-understand-theirs">הבן הודעה שקיבלתי</h3>
+                        <p class="text-gray-600 text-sm mode-understand-theirs-desc">הבן את הכוונה והטון</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Context -->
+            <div>
+                <label class="block font-bold mb-3 text-sm md:text-base context-label">הקשר התקשורת:</label>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <button onclick="setContext('general')" class="ctx-btn active-ctx context-general text-sm md:text-base">כללי</button>
+                    <button onclick="setContext('friend')" class="ctx-btn context-friend text-sm md:text-base">👥 חברי</button>
+                    <button onclick="setContext('work')" class="ctx-btn context-work text-sm md:text-base">💼 עסקי</button>
+                    <button onclick="setContext('romantic')" class="ctx-btn context-romantic text-sm md:text-base">❤️ רומנטי</button>
+                    <button onclick="setContext('family')" class="ctx-btn context-family text-sm md:text-base">👨‍👩‍👧‍👦 משפחתי</button>
+                </div>
+            </div>
+
+            <!-- Age -->
+            <div>
+                <label class="block font-bold mb-3 text-sm md:text-base age-label">למי אני כותב/ממי קיבלתי:</label>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button onclick="setAge('child')" class="age-btn age-child text-sm md:text-base">👶 ילד</button>
+                    <button onclick="setAge('teen')" class="age-btn age-teen text-sm md:text-base">🧒 נער/ה</button>
+                    <button onclick="setAge('adult')" class="age-btn active-age age-adult text-sm md:text-base">👨 מבוגר</button>
+                    <button onclick="setAge('senior')" class="age-btn age-senior text-sm md:text-base">👴 דור מבוגר</button>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div>
+                <label class="block font-bold mb-3 text-sm md:text-base personal-input-label">הטקסט שכתבתי:</label>
+                <textarea id="personalText" class="w-full h-40 p-3 md:p-4 text-base border-2 rounded-xl focus:border-indigo-600 focus:outline-none resize-none" placeholder="הדבק או הקלד כאן..."></textarea>
+                <button onclick="analyzePersonal()" id="analyzePersonalBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 md:py-4 rounded-xl shadow-lg transition-all text-sm md:text-base">
+                    נתח עכשיו
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="personalResults" class="hidden space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Group Chat Analyzer -->
+    <div id="group-tool" class="hidden max-w-6xl mx-auto px-4 pb-8">
+        <div class="bg-white rounded-b-2xl shadow-xl p-4 md:p-6 space-y-6">
+            
+            <!-- Participants -->
+            <div>
+                <h2 class="text-lg md:text-xl font-bold mb-4 group-participants-label">👥 משתתפי השיחה:</h2>
+                <div id="participantsList" class="space-y-3"></div>
+                <button onclick="addParticipant()" id="addParticipantBtn" class="mt-3 text-indigo-600 font-bold hover:text-indigo-800 transition-all text-sm md:text-base">+ הוסף משתתף</button>
+            </div>
+
+            <!-- Conversation -->
+            <div>
+                <label class="block font-bold mb-3 text-sm md:text-base group-conversation-label">💬 תוכן השיחה:</label>
+                <p class="text-xs md:text-sm text-gray-500 mb-2 group-conversation-hint">הדבק את השיחה - עדיף בפורמט: 'שם: הודעה' לכל שורה</p>
+                <textarea id="groupText" class="w-full h-48 p-3 md:p-4 text-base border-2 rounded-xl focus:border-indigo-600 focus:outline-none resize-none" placeholder="דוד: שלום כולם!&#10;שרה: היי..."></textarea>
+                <button onclick="analyzeGroup()" id="analyzeGroupBtn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 md:py-4 rounded-xl shadow-lg transition-all text-sm md:text-base">
+                    נתח שיחה קבוצתית
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="groupResults" class="hidden space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="max-w-6xl mx-auto px-4 pb-8 text-center text-gray-500 text-xs md:text-sm">
+        <p class="footer-text">כלי זה נועד לעזור בהבנת תקשורת וזיהוי דפוסים בעייתיים</p>
+    </footer>
+
+    <script>
+        // ===== CONFIGURATION =====
+        // הכנס כאן את מפתח ה-API שלך מ-console.anthropic.com
+        const API_KEY = 'YOUR_API_KEY_HERE';  // 👈 החלף את זה במפתח שלך!
+        
+        // ===== STATE =====
+        let currentLang = 'he';
+        let personalMode = 'mine';
+        let currentContext = 'general';
+        let currentAge = 'adult';
+        let participants = [{id: 1, name: ''}, {id: 2, name: ''}];
+
+        // ===== TRANSLATIONS =====
+        const translations = {
+            he: {
+                langBtn: '🇬🇧 English',
+                tabPersonal: 'ניתוח הודעה אישית',
+                tabGroup: 'ניתוח שיחה קבוצתית',
+                modeTitle: 'מה תרצה לעשות?',
+                modeAnalyzeMine: 'נתח את ההודעה שלי',
+                modeAnalyzeMineDesc: 'בדוק טקסט לפני ששולח',
+                modeUnderstandTheirs: 'הבן הודעה שקיבלתי',
+                modeUnderstandTheirsDesc: 'הבן את הכוונה והטון',
+                contextLabel: 'הקשר התקשורת:',
+                ageLabel: 'למי אני כותב/ממי קיבלתי:',
+                contextGeneral: 'כללי',
+                contextFriend: '👥 חברי',
+                contextWork: '💼 עסקי',
+                contextRomantic: '❤️ רומנטי',
+                contextFamily: '👨‍👩‍👧‍👦 משפחתי',
+                ageChild: '👶 ילד',
+                ageTeen: '🧒 נער/ה',
+                ageAdult: '👨 מבוגר',
+                ageSenior: '👴 דור מבוגר',
+                personalInputLabel: 'הטקסט שכתבתי:',
+                personalInputLabelTheirs: 'ההודעה שקיבלתי:',
+                personalAnalyzeBtn: 'נתח עכשיו',
+                personalAnalyzing: 'מנתח...',
+                groupParticipantsLabel: '👥 משתתפי השיחה:',
+                groupAddParticipant: '+ הוסף משתתף',
+                groupConversationLabel: '💬 תוכן השיחה:',
+                groupConversationHint: 'הדבק את השיחה - עדיף בפורמט: \'שם: הודעה\' לכל שורה',
+                groupAnalyzeBtn: 'נתח שיחה קבוצתית',
+                groupAnalyzing: 'מנתח דינמיקה...',
+                footerText: 'כלי זה נועד לעזור בהבנת תקשורת וזיהוי דפוסים בעייתיים',
+                participantPlaceholder: 'שם משתתף',
+                errorNoApi: 'שגיאה: נא להזין מפתח API בקוד',
+                errorNoText: 'אנא הכנס טקסט לניתוח',
+                errorNoParticipants: 'אנא הכנס לפחות 2 שמות משתתפים',
+                results: 'תוצאות הניתוח',
+                redFlagsTitle: 'דגלים אדומים - התנהגות בעייתית זוהתה!',
+                severitySevere: 'חמורה',
+                severityModerate: 'בינונית',
+                severityMild: 'קלה',
+                howToRespond: 'כיצד להגיב:',
+                understanding: 'מה הבנתי:',
+                mainMessage: 'מה השולח אומר:',
+                tone: 'הטון:',
+                emotions: 'רגשות:',
+                clarity: 'בהירות:',
+                improvedVersion: 'גרסה משופרת:',
+                suggestedResponse: 'תשובה מוצעת:',
+                analyzeAnother: 'נתח הודעה נוספת',
+                summary: 'סיכום:',
+                powerBalance: 'איזון כוחות:',
+                groupHealth: 'בריאות הקבוצה:',
+                participantAnalysis: 'ניתוח כל משתתף:',
+                relationships: 'דינמיקה בין משתתפים:',
+                conflicts: 'קונפליקטים:',
+                positiveMoments: 'רגעים חיוביים:',
+                recommendations: 'המלצות:',
+            },
+            en: {
+                langBtn: '🇮🇱 עברית',
+                tabPersonal: 'Personal Message',
+                tabGroup: 'Group Chat',
+                modeTitle: 'What would you like to do?',
+                modeAnalyzeMine: 'Analyze My Message',
+                modeAnalyzeMineDesc: 'Check before sending',
+                modeUnderstandTheirs: 'Understand Received Message',
+                modeUnderstandTheirsDesc: 'Understand meaning & tone',
+                contextLabel: 'Communication context:',
+                ageLabel: 'Writing to/from:',
+                contextGeneral: 'General',
+                contextFriend: '👥 Friends',
+                contextWork: '💼 Work',
+                contextRomantic: '❤️ Romantic',
+                contextFamily: '👨‍👩‍👧‍👦 Family',
+                ageChild: '👶 Child',
+                ageTeen: '🧒 Teen',
+                ageAdult: '👨 Adult',
+                ageSenior: '👴 Senior',
+                personalInputLabel: 'My text:',
+                personalInputLabelTheirs: 'Received message:',
+                personalAnalyzeBtn: 'Analyze Now',
+                personalAnalyzing: 'Analyzing...',
+                groupParticipantsLabel: '👥 Participants:',
+                groupAddParticipant: '+ Add participant',
+                groupConversationLabel: '💬 Conversation:',
+                groupConversationHint: 'Paste conversation - format: \'Name: message\' per line',
+                groupAnalyzeBtn: 'Analyze Group Chat',
+                groupAnalyzing: 'Analyzing...',
+                footerText: 'Tool for understanding communication and identifying problematic patterns',
+                participantPlaceholder: 'Participant name',
+                errorNoApi: 'Error: Please enter API key in code',
+                errorNoText: 'Please enter text to analyze',
+                errorNoParticipants: 'Please enter at least 2 participant names',
+                results: 'Analysis Results',
+                redFlagsTitle: 'Red Flags Detected!',
+                severitySevere: 'Severe',
+                severityModerate: 'Moderate',
+                severityMild: 'Mild',
+                howToRespond: 'How to respond:',
+                understanding: 'Understanding:',
+                mainMessage: 'Sender says:',
+                tone: 'Tone:',
+                emotions: 'Emotions:',
+                clarity: 'Clarity:',
+                improvedVersion: 'Improved version:',
+                suggestedResponse: 'Suggested response:',
+                analyzeAnother: 'Analyze Another',
+                summary: 'Summary:',
+                powerBalance: 'Power balance:',
+                groupHealth: 'Group health:',
+                participantAnalysis: 'Participant analysis:',
+                relationships: 'Relationships:',
+                conflicts: 'Conflicts:',
+                positiveMoments: 'Positive moments:',
+                recommendations: 'Recommendations:',
+            }
+        };
+
+        // ===== UI FUNCTIONS =====
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        function updateTexts() {
+            document.getElementById('langBtn').textContent = t('langBtn');
+            document.querySelectorAll('.tab-text-personal').forEach(el => el.textContent = t('tabPersonal'));
+            document.querySelectorAll('.tab-text-group').forEach(el => el.textContent = t('tabGroup'));
+            document.querySelectorAll('.mode-title').forEach(el => el.textContent = t('modeTitle'));
+            document.querySelectorAll('.mode-analyze-mine').forEach(el => el.textContent = t('modeAnalyzeMine'));
+            document.querySelectorAll('.mode-analyze-mine-desc').forEach(el => el.textContent = t('modeAnalyzeMineDesc'));
+            document.querySelectorAll('.mode-understand-theirs').forEach(el => el.textContent = t('modeUnderstandTheirs'));
+            document.querySelectorAll('.mode-understand-theirs-desc').forEach(el => el.textContent = t('modeUnderstandTheirsDesc'));
+            document.querySelectorAll('.context-label').forEach(el => el.textContent = t('contextLabel'));
+            document.querySelectorAll('.age-label').forEach(el => el.textContent = t('ageLabel'));
+            document.querySelectorAll('.context-general').forEach(el => el.textContent = t('contextGeneral'));
+            document.querySelectorAll('.context-friend').forEach(el => el.textContent = t('contextFriend'));
+            document.querySelectorAll('.context-work').forEach(el => el.textContent = t('contextWork'));
+            document.querySelectorAll('.context-romantic').forEach(el => el.textContent = t('contextRomantic'));
+            document.querySelectorAll('.context-family').forEach(el => el.textContent = t('contextFamily'));
+            document.querySelectorAll('.age-child').forEach(el => el.textContent = t('ageChild'));
+            document.querySelectorAll('.age-teen').forEach(el => el.textContent = t('ageTeen'));
+            document.querySelectorAll('.age-adult').forEach(el => el.textContent = t('ageAdult'));
+            document.querySelectorAll('.age-senior').forEach(el => el.textContent = t('ageSenior'));
+            document.querySelectorAll('.personal-input-label').forEach(el => el.textContent = personalMode === 'mine' ? t('personalInputLabel') : t('personalInputLabelTheirs'));
+            document.getElementById('analyzePersonalBtn').textContent = t('personalAnalyzeBtn');
+            document.querySelectorAll('.group-participants-label').forEach(el => el.textContent = t('groupParticipantsLabel'));
+            document.getElementById('addParticipantBtn').textContent = t('groupAddParticipant');
+            document.querySelectorAll('.group-conversation-label').forEach(el => el.textContent = t('groupConversationLabel'));
+            document.querySelectorAll('.group-conversation-hint').forEach(el => el.textContent = t('groupConversationHint'));
+            document.getElementById('analyzeGroupBtn').textContent = t('groupAnalyzeBtn');
+            document.querySelectorAll('.footer-text').forEach(el => el.textContent = t('footerText'));
+            renderParticipants();
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'he' ? 'en' : 'he';
+            document.documentElement.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+            document.documentElement.lang = currentLang;
+            updateTexts();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-personal').className = 'flex-1 py-4 px-3 md:px-6 font-bold text-sm md:text-lg hover:bg-gray-50 transition-all';
+            document.getElementById('tab-group').className = 'flex-1 py-4 px-3 md:px-6 font-bold text-sm md:text-lg hover:bg-gray-50 transition-all';
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            
+            document.getElementById('personal-tool').classList.toggle('hidden', tab !== 'personal');
+            document.getElementById('group-tool').classList.toggle('hidden', tab !== 'group');
+        }
+
+        function setPersonalMode(mode) {
+            personalMode = mode;
+            document.getElementById('btn-mine').className = mode === 'mine' 
+                ? 'p-4 md:p-6 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-right transition-all'
+                : 'p-4 md:p-6 rounded-xl border-2 border-gray-300 text-right hover:border-indigo-300 transition-all';
+            document.getElementById('btn-theirs').className = mode === 'theirs'
+                ? 'p-4 md:p-6 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-right transition-all'
+                : 'p-4 md:p-6 rounded-xl border-2 border-gray-300 text-right hover:border-indigo-300 transition-all';
+            updateTexts();
+        }
+
+        function setContext(ctx) {
+            currentContext = ctx;
+            document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active-ctx'));
+            event.target.classList.add('active-ctx');
+        }
+
+        function setAge(age) {
+            currentAge = age;
+            document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active-age'));
+            event.target.classList.add('active-age');
+        }
+
+        function addParticipant() {
+            if (participants.length < 5) {
+                participants.push({id: Date.now(), name: ''});
+                renderParticipants();
+            }
+        }
+
+        function removeParticipant(id) {
+            if (participants.length > 2) {
+                participants = participants.filter(p => p.id !== id);
+                renderParticipants();
+            }
+        }
+
+        function updateParticipant(id, name) {
+            participants = participants.map(p => p.id === id ? {...p, name} : p);
+        }
+
+        function renderParticipants() {
+            const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
+            const html = participants.map((p, i) => `
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full ${colors[i]} flex items-center justify-center text-white font-bold flex-shrink-0">${i+1}</div>
+                    <input value="${p.name}" oninput="updateParticipant(${p.id}, this.value)" placeholder="${t('participantPlaceholder')} ${i+1}" class="flex-1 p-3 text-sm md:text-base border-2 border-gray-300 rounded-xl focus:border-indigo-600 focus:outline-none">
+                    ${participants.length > 2 ? `<button onclick="removeParticipant(${p.id})" class="text-red-400 hover:text-red-600 text-xl">✕</button>` : ''}
+                </div>
+            `).join('');
+            document.getElementById('participantsList').innerHTML = html;
+        }
+
+        // ===== API CALL =====
+        async function callAPI(prompt) {
+            if (API_KEY === 'YOUR_API_KEY_HERE') {
+                throw new Error(t('errorNoApi'));
+            }
+
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': API_KEY,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 3000,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API Error');
+            }
+
+            const data = await response.json();
+            const text = data.content[0].text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            return JSON.parse(text);
+        }
+
+        // ===== PERSONAL ANALYSIS =====
+        async function analyzePersonal() {
+            const text = document.getElementById('personalText').value.trim();
+            if (!text) {
+                alert(t('errorNoText'));
+                return;
+            }
+
+            const btn = document.getElementById('analyzePersonalBtn');
+            btn.textContent = t('personalAnalyzing');
+            btn.disabled = true;
+
+            try {
+                const contextMap = {
+                    general: currentLang === 'he' ? 'כללי' : 'general',
+                    friend: currentLang === 'he' ? 'חברי' : 'friends',
+                    work: currentLang === 'he' ? 'עסקי' : 'work',
+                    romantic: currentLang === 'he' ? 'רומנטי' : 'romantic',
+                    family: currentLang === 'he' ? 'משפחתי' : 'family'
+                };
+                const ageMap = {
+                    child: currentLang === 'he' ? 'ילד' : 'child',
+                    teen: currentLang === 'he' ? 'נער' : 'teen',
+                    adult: currentLang === 'he' ? 'מבוגר' : 'adult',
+                    senior: currentLang === 'he' ? 'דור מבוגר' : 'senior'
+                };
+
+                const prompt = currentLang === 'he'
+                    ? `נתח טקסט בעברית. החזר JSON בלבד.
+הקשר: ${contextMap[currentContext]}
+גיל: ${ageMap[currentAge]}
+טקסט: "${text}"
+זהה דגלים אדומים: אלימות, שתלטנות, מניפולציה.
+JSON:
+{"understanding":"הסבר","tone":"טון","clarity":5,"red_flags":[{"type":"סוג","quote":"ציטוט","explanation":"הסבר","severity":"mild/moderate/severe"}],"emotions_detected":["רגש"],"improved_version":"טקסט מתוקן","how_to_address":"המלצות אם יש דגלים"}`
+                    : `Analyze text in English. Return JSON only.
+Context: ${contextMap[currentContext]}
+Age: ${ageMap[currentAge]}
+Text: "${text}"
+Detect red flags: abuse, control, manipulation.
+JSON:
+{"understanding":"explanation","tone":"tone","clarity":5,"red_flags":[{"type":"type","quote":"quote","explanation":"explanation","severity":"mild/moderate/severe"}],"emotions_detected":["emotion"],"improved_version":"improved text","how_to_address":"recommendations if flags"}`;
+
+                const analysis = await callAPI(personalMode === 'mine' ? prompt : prompt.replace('הסבר', 'מה השולח אומר').replace('explanation', 'what sender says'));
+                displayPersonalResults(analysis);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.textContent = t('personalAnalyzeBtn');
+                btn.disabled = false;
+            }
+        }
+
+        function displayPersonalResults(a) {
+            let html = `<h2 class="text-xl font-bold text-gray-800 pb-4 border-b-2 border-indigo-100">✅ ${t('results')}</h2>`;
+            
+            // Red flags
+            if (a.red_flags && a.red_flags.length > 0) {
+                html += `<div class="bg-red-100 rounded-xl p-5 border-4 border-red-500">
+                    <h3 class="text-xl font-bold text-red-900 mb-4">🚨 ${t('redFlagsTitle')}</h3>`;
+                a.red_flags.forEach(f => {
+                    const sev = f.severity === 'severe' ? t('severitySevere') : f.severity === 'moderate' ? t('severityModerate') : t('severityMild');
+                    const sevClass = f.severity === 'severe' ? 'bg-red-600' : f.severity === 'moderate' ? 'bg-orange-500' : 'bg-yellow-400';
+                    html += `<div class="bg-white p-4 rounded-lg mb-3 border-l-4 border-red-600">
+                        <h4 class="text-lg font-bold text-red-800 mb-2">🚩 ${f.type}</h4>
+                        <span class="px-3 py-1 rounded-full text-sm font-bold text-white ${sevClass}">${sev}</span>
+                        <div class="bg-red-50 p-3 my-2 rounded border border-red-200">
+                            <p class="text-red-900 font-semibold">"${f.quote}"</p>
+                        </div>
+                        <p class="text-gray-800">${f.explanation}</p>
+                    </div>`;
+                });
+                if (a.how_to_address) {
+                    html += `<div class="bg-green-50 p-4 rounded-lg mt-3 border-2 border-green-400">
+                        <h4 class="font-bold text-green-900 mb-2">💡 ${t('howToRespond')}</h4>
+                        <p class="text-green-900">${a.how_to_address}</p>
+                    </div>`;
+                }
+                html += '</div>';
+            }
+
+            // Understanding/Main message
+            if (a.understanding || a.main_message) {
+                html += `<div class="bg-blue-50 rounded-xl p-4">
+                    <h3 class="font-bold text-gray-800 mb-2">💡 ${personalMode === 'mine' ? t('understanding') : t('mainMessage')}</h3>
+                    <p class="text-gray-700">${a.understanding || a.main_message}</p>
+                </div>`;
+            }
+
+            // Tone
+            if (a.tone) {
+                html += `<div class="bg-purple-50 rounded-xl p-4">
+                    <h3 class="font-bold text-gray-800 mb-2">🎭 ${t('tone')}</h3>
+                    <p class="text-gray-700">${a.tone}</p>
+                </div>`;
+            }
+
+            // Emotions
+            if (a.emotions_detected && a.emotions_detected.length > 0) {
+                html += `<div class="bg-pink-50 rounded-xl p-4">
+                    <h3 class="font-bold text-gray-800 mb-2">❤️ ${t('emotions')}</h3>
+                    <div class="flex flex-wrap gap-2">`;
+                a.emotions_detected.forEach(e => {
+                    html += `<span class="bg-pink-200 text-pink-800 px-3 py-1 rounded-full font-semibold">${e}</span>`;
+                });
+                html += '</div></div>';
+            }
+
+            // Clarity
+            if (a.clarity) {
+                html += `<div class="bg-green-50 rounded-xl p-4">
+                    <h3 class="font-bold text-gray-800 mb-2">📊 ${t('clarity')}</h3>
+                    <div class="flex gap-1">`;
+                for (let i = 1; i <= 5; i++) {
+                    html += `<span class="text-2xl">${i <= a.clarity ? '⭐' : '☆'}</span>`;
+                }
+                html += `<span class="mr-2">(${a.clarity}/5)</span></div></div>`;
+            }
+
+            // Improved version
+            if (a.improved_version) {
+                html += `<div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
+                    <h3 class="font-bold text-gray-800 mb-3">✨ ${t('improvedVersion')}</h3>
+                    <p class="bg-white p-4 rounded-lg text-gray-800">${a.improved_version}</p>
+                </div>`;
+            }
+
+            // Suggested response
+            if (a.suggested_response) {
+                html += `<div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
+                    <h3 class="font-bold text-gray-800 mb-3">✍️ ${t('suggestedResponse')}</h3>
+                    <p class="bg-white p-4 rounded-lg text-gray-800">${a.suggested_response}</p>
+                </div>`;
+            }
+
+            html += `<button onclick="document.getElementById('personalText').value='';document.getElementById('personalResults').classList.add('hidden')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-xl">${t('analyzeAnother')}</button>`;
+            
+            document.getElementById('personalResults').innerHTML = html;
+            document.getElementById('personalResults').classList.remove('hidden');
+        }
+
+        // ===== GROUP ANALYSIS =====
+        async function analyzeGroup() {
+            const text = document.getElementById('groupText').value.trim();
+            const named = participants.filter(p => p.name.trim());
+            
+            if (!text) {
+                alert(t('errorNoText'));
+                return;
+            }
+            if (named.length < 2) {
+                alert(t('errorNoParticipants'));
+                return;
+            }
+
+            const btn = document.getElementById('analyzeGroupBtn');
+            btn.textContent = t('groupAnalyzing');
+            btn.disabled = true;
+
+            try {
+                const names = named.map(p => p.name).join(', ');
+                const prompt = currentLang === 'he'
+                    ? `נתח שיחה קבוצתית. החזר JSON בלבד.
+משתתפים: ${names}
+שיחה: "${text}"
+JSON:
+{"summary":"סיכום","overall_dynamic":"דינמיקה","power_balance":"איזון כוחות","group_health":"בריאות 1-10","participants":[{"name":"שם","role":"תפקיד","tone":"טון","emotions":["רגש"],"behavior_patterns":"דפוסים","influence_level":"גבוה/בינוני/נמוך","red_flags":["דגל"]}],"relationships":[{"between":["שם1","שם2"],"dynamic":"דינמיקה","tension_level":"high/medium/low/none"}],"red_flags":[{"type":"סוג","who":"מי","quote":"ציטוט","explanation":"הסבר","severity":"mild/moderate/severe"}],"conflicts":[{"between":["שם1","שם2"],"about":"נושא","resolved":false,"suggestion":"פתרון"}],"positive_moments":["רגע"],"recommendations":["המלצה"]}`
+                    : `Analyze group chat. Return JSON only.
+Participants: ${names}
+Chat: "${text}"
+JSON:
+{"summary":"summary","overall_dynamic":"dynamic","power_balance":"balance","group_health":"health 1-10","participants":[{"name":"name","role":"role","tone":"tone","emotions":["emotion"],"behavior_patterns":"patterns","influence_level":"high/medium/low","red_flags":["flag"]}],"relationships":[{"between":["name1","name2"],"dynamic":"dynamic","tension_level":"high/medium/low/none"}],"red_flags":[{"type":"type","who":"who","quote":"quote","explanation":"explanation","severity":"mild/moderate/severe"}],"conflicts":[{"between":["name1","name2"],"about":"topic","resolved":false,"suggestion":"solution"}],"positive_moments":["moment"],"recommendations":["recommendation"]}`;
+
+                const analysis = await callAPI(prompt);
+                displayGroupResults(analysis);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.textContent = t('groupAnalyzeBtn');
+                btn.disabled = false;
+            }
+        }
+
+        function displayGroupResults(a) {
+            let html = `<h2 class="text-xl font-bold text-gray-800 pb-4 border-b-2 border-indigo-100">✅ ${t('results')}</h2>`;
+            
+            // Summary
+            if (a.summary) {
+                html += `<div class="bg-indigo-50 rounded-xl p-4">
+                    <h3 class="font-bold text-indigo-900 mb-2">📋 ${t('summary')}</h3>
+                    <p class="text-gray-800">${a.summary}</p>
+                </div>`;
+            }
+
+            // Power & Health
+            html += '<div class="grid md:grid-cols-2 gap-4">';
+            if (a.power_balance) {
+                html += `<div class="bg-blue-50 rounded-xl p-4">
+                    <h3 class="font-bold text-blue-900 mb-2">⚖️ ${t('powerBalance')}</h3>
+                    <p class="text-gray-700">${a.power_balance}</p>
+                </div>`;
+            }
+            if (a.group_health) {
+                html += `<div class="bg-green-50 rounded-xl p-4">
+                    <h3 class="font-bold text-green-900 mb-2">💚 ${t('groupHealth')}</h3>
+                    <p class="text-gray-700">${a.group_health}</p>
+                </div>`;
+            }
+            html += '</div>';
+
+            // Red flags
+            if (a.red_flags && a.red_flags.length > 0) {
+                html += `<div class="bg-red-100 rounded-xl p-5 border-4 border-red-500">
+                    <h3 class="text-xl font-bold text-red-900 mb-4">🚨 ${t('redFlagsTitle')}</h3>`;
+                a.red_flags.forEach(f => {
+                    const sev = f.severity === 'severe' ? t('severitySevere') : f.severity === 'moderate' ? t('severityModerate') : t('severityMild');
+                    const sevClass = f.severity === 'severe' ? 'bg-red-600' : f.severity === 'moderate' ? 'bg-orange-500' : 'bg-yellow-400';
+                    html += `<div class="bg-white p-4 rounded-lg mb-3">
+                        <h4 class="text-lg font-bold text-red-800">🚩 ${f.type}</h4>
+                        <span class="px-3 py-1 rounded-full text-sm font-bold text-white ${sevClass}">${sev}</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-bold bg-gray-700 text-white mr-2">${f.who}</span>
+                        <div class="bg-red-50 p-3 my-2 rounded"><p class="text-red-900 font-semibold">"${f.quote}"</p></div>
+                        <p class="text-gray-800">${f.explanation}</p>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+
+            html += `<button onclick="document.getElementById('groupText').value='';document.getElementById('groupResults').classList.add('hidden')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-xl">${t('analyzeAnother')}</button>`;
+            
+            document.getElementById('groupResults').innerHTML = html;
+            document.getElementById('groupResults').classList.remove('hidden');
+        }
+
+        // ===== INIT =====
+        renderParticipants();
+        updateTexts();
+    </script>
+</body>
+</html>
