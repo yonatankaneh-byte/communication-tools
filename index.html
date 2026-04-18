@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כלי ניתוח תקשורת | Communication Analysis Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Assistant', sans-serif; }
+        .tab-active { border-bottom: 4px solid #4f46e5; background: linear-gradient(to bottom, #eef2ff, white); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .ctx-btn, .age-btn { padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s; cursor: pointer; }
+        .ctx-btn:hover, .age-btn:hover { border-color: #818cf8; }
+        .active-ctx, .active-age { border-color: #4f46e5 !important; background: #eef2ff !important; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen">
+    
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">🔑 הזן מפתח API</h2>
+            <p class="text-gray-600 mb-4">כדי להשתמש בכלי, צריך מפתח API מ-Anthropic:</p>
+            <ol class="text-sm text-gray-600 mb-4 space-y-1 list-decimal list-inside">
+                <li>לך ל-<a href="https://console.anthropic.com" target="_blank" class="text-indigo-600 underline">console.anthropic.com</a></li>
+                <li>צור חשבון או התחבר</li>
+                <li>ב-API Keys לחץ Create Key</li>
+                <li>העתק את המפתח והדבק כאן</li>
+            </ol>
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-indigo-600 focus:outline-none mb-4">
+            <div class="flex items-center gap-2 mb-4">
+                <input type="checkbox" id="saveKey" class="w-4 h-4">
+                <label for="saveKey" class="text-sm text-gray-600">שמור במכשיר זה (בטוח מקומית)</label>
+            </div>
+            <button onclick="saveApiKey()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl">
+                התחל להשתמש
+            </button>
+            <p class="text-xs text-gray-500 mt-3">המפתח נשמר רק במכשיר שלך ולא נשלח לשום מקום מלבד Anthropic</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-indigo-600 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl shadow-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold text-gray-900">כלי ניתוח תקשורת</h1>
+                        <p class="text-gray-600 text-xs md:text-sm">עזרה להבנת הודעות וזיהוי דגלים אדומים</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleLang()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-2 rounded-lg font-bold transition-all text-sm">
+                        <span id="langBtn">🇬🇧 EN</span>
+                    </button>
+                    <button onclick="changeApiKey()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-bold transition-all text-sm" title="שנה מפתח API">
+                        🔑
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="max-w-6xl mx-auto px-4 mt-6">
+        <div class="bg-white rounded-t-2xl shadow-xl flex">
+            <button onclick="switchTab('personal')" id="tab-personal" class="flex-1 py-3 px-3 md:px-6 font-bold text-sm md:text-base tab-active transition-all">
+                ✍️ <span class="tab-text-personal">ניתוח אישי</span>
+            </button>
+            <button onclick="switchTab('group')" id="tab-group" class="flex-1 py-3 px-3 md:px-6 font-bold text-sm md:text-base hover:bg-gray-50 transition-all">
+                👥 <span class="tab-text-group">ניתוח קבוצתי</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Personal Tool -->
+    <div id="personal-tool" class="max-w-6xl mx-auto px-4 pb-8">
+        <div class="bg-white rounded-b-2xl shadow-xl p-4 md:p-6 space-y-4">
+            
+            <!-- Mode -->
+            <div>
+                <h2 class="text-base md:text-lg font-bold mb-3 mode-title">מה תרצה לעשות?</h2>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <button onclick="setPersonalMode('mine')" id="btn-mine" class="p-4 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-right">
+                        <div class="text-2xl mb-1">✍️</div>
+                        <h3 class="font-bold text-sm mb-1 mode-mine">נתח הודעה שלי</h3>
+                    </button>
+                    <button onclick="setPersonalMode('theirs')" id="btn-theirs" class="p-4 rounded-xl border-2 border-gray-300 text-right hover:border-indigo-300">
+                        <div class="text-2xl mb-1">📨</div>
+                        <h3 class="font-bold text-sm mb-1 mode-theirs">הבן הודעה שקיבלתי</h3>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Context & Age -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold mb-2 text-sm context-label">הקשר:</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button onclick="setContext('general')" class="ctx-btn active-ctx">כללי</button>
+                        <button onclick="setContext('friend')" class="ctx-btn">👥 חברי</button>
+                        <button onclick="setContext('work')" class="ctx-btn">💼 עסקי</button>
+                        <button onclick="setContext('family')" class="ctx-btn">👨‍👩‍👧‍👦 משפחה</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold mb-2 text-sm age-label">גיל:</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button onclick="setAge('child')" class="age-btn">👶 ילד</button>
+                        <button onclick="setAge('teen')" class="age-btn">🧒 נער</button>
+                        <button onclick="setAge('adult')" class="age-btn active-age">👨 מבוגר</button>
+                        <button onclick="setAge('senior')" class="age-btn">👴 מבוגר+</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div>
+                <label class="block font-bold mb-2 text-sm personal-label">הטקסט:</label>
+                <textarea id="personalText" class="w-full h-32 p-3 text-sm border-2 rounded-xl focus:border-indigo-600 focus:outline-none resize-none" placeholder="הדבק כאן..."></textarea>
+                <button onclick="analyzePersonal()" id="analyzePersonalBtn" class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-xl text-sm">
+                    נתח עכשיו
+                </button>
+            </div>
+
+            <div id="personalResults" class="hidden space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Group Tool -->
+    <div id="group-tool" class="hidden max-w-6xl mx-auto px-4 pb-8">
+        <div class="bg-white rounded-b-2xl shadow-xl p-4 md:p-6 space-y-4">
+            
+            <div>
+                <h2 class="text-base md:text-lg font-bold mb-3">👥 משתתפים:</h2>
+                <div id="participantsList" class="space-y-2"></div>
+                <button onclick="addParticipant()" class="mt-2 text-indigo-600 font-bold text-sm">+ הוסף</button>
+            </div>
+
+            <div>
+                <label class="block font-bold mb-2 text-sm">💬 שיחה:</label>
+                <textarea id="groupText" class="w-full h-40 p-3 text-sm border-2 rounded-xl focus:border-indigo-600 focus:outline-none resize-none" placeholder="דוד: שלום!&#10;שרה: היי..."></textarea>
+                <button onclick="analyzeGroup()" id="analyzeGroupBtn" class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-xl text-sm">
+                    נתח קבוצה
+                </button>
+            </div>
+
+            <div id="groupResults" class="hidden space-y-3"></div>
+        </div>
+    </div>
+
+    <script>
+        let API_KEY = null;
+        let currentLang = 'he';
+        let personalMode = 'mine';
+        let currentContext = 'general';
+        let currentAge = 'adult';
+        let participants = [{id: 1, name: ''}, {id: 2, name: ''}];
+
+        const t = {
+            he: {
+                langBtn: '🇬🇧 EN',
+                tabPersonal: 'ניתוח אישי',
+                tabGroup: 'ניתוח קבוצתי',
+                modeTitle: 'מה תרצה לעשות?',
+                modeMine: 'נתח הודעה שלי',
+                modeTheirs: 'הבן הודעה שקיבלתי',
+                contextLabel: 'הקשר:',
+                ageLabel: 'גיל:',
+                personalLabel: 'הטקסט:',
+                personalLabelTheirs: 'ההודעה:',
+                analyzeBtn: 'נתח עכשיו',
+                analyzing: 'מנתח...',
+                results: 'תוצאות',
+                redFlags: 'דגלים אדומים!',
+                understanding: 'הבנה:',
+                mainMessage: 'מסר:',
+                tone: 'טון:',
+                emotions: 'רגשות:',
+                improved: 'משופר:',
+                suggested: 'תשובה:',
+                analyzeAnother: 'נתח נוסף',
+            },
+            en: {
+                langBtn: '🇮🇱 HE',
+                tabPersonal: 'Personal',
+                tabGroup: 'Group',
+                modeTitle: 'What to do?',
+                modeMine: 'Analyze my message',
+                modeTheirs: 'Understand received',
+                contextLabel: 'Context:',
+                ageLabel: 'Age:',
+                personalLabel: 'Text:',
+                personalLabelTheirs: 'Message:',
+                analyzeBtn: 'Analyze',
+                analyzing: 'Analyzing...',
+                results: 'Results',
+                redFlags: 'Red Flags!',
+                understanding: 'Understanding:',
+                mainMessage: 'Message:',
+                tone: 'Tone:',
+                emotions: 'Emotions:',
+                improved: 'Improved:',
+                suggested: 'Response:',
+                analyzeAnother: 'Analyze Another',
+            }
+        };
+
+        function updateTexts() {
+            const lang = t[currentLang];
+            document.getElementById('langBtn').textContent = lang.langBtn;
+            document.querySelectorAll('.tab-text-personal').forEach(el => el.textContent = lang.tabPersonal);
+            document.querySelectorAll('.tab-text-group').forEach(el => el.textContent = lang.tabGroup);
+            document.querySelectorAll('.mode-title').forEach(el => el.textContent = lang.modeTitle);
+            document.querySelectorAll('.mode-mine').forEach(el => el.textContent = lang.modeMine);
+            document.querySelectorAll('.mode-theirs').forEach(el => el.textContent = lang.modeTheirs);
+            document.querySelectorAll('.context-label').forEach(el => el.textContent = lang.contextLabel);
+            document.querySelectorAll('.age-label').forEach(el => el.textContent = lang.ageLabel);
+            document.querySelectorAll('.personal-label').forEach(el => el.textContent = personalMode === 'mine' ? lang.personalLabel : lang.personalLabelTheirs);
+            document.getElementById('analyzePersonalBtn').textContent = lang.analyzeBtn;
+            document.getElementById('analyzeGroupBtn').textContent = lang.analyzeBtn;
+            renderParticipants();
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'he' ? 'en' : 'he';
+            document.documentElement.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+            document.documentElement.lang = currentLang;
+            updateTexts();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-personal').className = 'flex-1 py-3 px-3 md:px-6 font-bold text-sm md:text-base hover:bg-gray-50 transition-all';
+            document.getElementById('tab-group').className = 'flex-1 py-3 px-3 md:px-6 font-bold text-sm md:text-base hover:bg-gray-50 transition-all';
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            document.getElementById('personal-tool').classList.toggle('hidden', tab !== 'personal');
+            document.getElementById('group-tool').classList.toggle('hidden', tab !== 'group');
+        }
+
+        function setPersonalMode(mode) {
+            personalMode = mode;
+            document.getElementById('btn-mine').className = mode === 'mine' ? 'p-4 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-right' : 'p-4 rounded-xl border-2 border-gray-300 text-right hover:border-indigo-300';
+            document.getElementById('btn-theirs').className = mode === 'theirs' ? 'p-4 rounded-xl border-2 border-indigo-600 bg-indigo-50 text-right' : 'p-4 rounded-xl border-2 border-gray-300 text-right hover:border-indigo-300';
+            updateTexts();
+        }
+
+        function setContext(ctx) {
+            currentContext = ctx;
+            document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active-ctx'));
+            event.target.classList.add('active-ctx');
+        }
+
+        function setAge(age) {
+            currentAge = age;
+            document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active-age'));
+            event.target.classList.add('active-age');
+        }
+
+        function addParticipant() {
+            if (participants.length < 5) {
+                participants.push({id: Date.now(), name: ''});
+                renderParticipants();
+            }
+        }
+
+        function removeParticipant(id) {
+            if (participants.length > 2) {
+                participants = participants.filter(p => p.id !== id);
+                renderParticipants();
+            }
+        }
+
+        function updateParticipant(id, name) {
+            participants = participants.map(p => p.id === id ? {...p, name} : p);
+        }
+
+        function renderParticipants() {
+            const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
+            const html = participants.map((p, i) => `
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full ${colors[i]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0">${i+1}</div>
+                    <input value="${p.name}" oninput="updateParticipant(${p.id}, this.value)" placeholder="שם ${i+1}" class="flex-1 p-2 text-sm border-2 border-gray-300 rounded-lg focus:border-indigo-600 focus:outline-none">
+                    ${participants.length > 2 ? `<button onclick="removeParticipant(${p.id})" class="text-red-400 hover:text-red-600 text-lg">✕</button>` : ''}
+                </div>
+            `).join('');
+            document.getElementById('participantsList').innerHTML = html;
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key || !key.startsWith('sk-ant-')) {
+                alert('אנא הזן מפתח API תקין');
+                return;
+            }
+            API_KEY = key;
+            if (document.getElementById('saveKey').checked) {
+                localStorage.setItem('anthropic_api_key', key);
+            }
+            document.getElementById('apiKeyModal').style.display = 'none';
+        }
+
+        function changeApiKey() {
+            document.getElementById('apiKeyModal').style.display = 'flex';
+            document.getElementById('apiKeyInput').value = '';
+        }
+
+        async function callAPI(prompt) {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': API_KEY,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 2500,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || 'API Error');
+            }
+
+            const data = await response.json();
+            return JSON.parse(data.content[0].text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+        }
+
+        async function analyzePersonal() {
+            const text = document.getElementById('personalText').value.trim();
+            if (!text) { alert('הכנס טקסט'); return; }
+
+            const btn = document.getElementById('analyzePersonalBtn');
+            btn.textContent = t[currentLang].analyzing;
+            btn.disabled = true;
+
+            try {
+                const prompt = currentLang === 'he'
+                    ? `נתח טקסט. החזר JSON בלבד.\nטקסט: "${text}"\nJSON: {"understanding":"הסבר","tone":"טון","clarity":5,"red_flags":[{"type":"סוג","quote":"ציטוט","explanation":"הסבר","severity":"mild"}],"emotions_detected":["רגש"],"improved_version":"משופר"}`
+                    : `Analyze text. Return JSON only.\nText: "${text}"\nJSON: {"understanding":"explanation","tone":"tone","clarity":5,"red_flags":[{"type":"type","quote":"quote","explanation":"explanation","severity":"mild"}],"emotions_detected":["emotion"],"improved_version":"improved"}`;
+
+                const a = await callAPI(prompt);
+                let html = `<h2 class="text-lg font-bold pb-3 border-b-2 border-indigo-100">✅ ${t[currentLang].results}</h2>`;
+                
+                if (a.red_flags && a.red_flags.length > 0) {
+                    html += '<div class="bg-red-100 rounded-xl p-4 border-2 border-red-500"><h3 class="text-lg font-bold text-red-900 mb-3">🚨 ' + t[currentLang].redFlags + '</h3>';
+                    a.red_flags.forEach(f => {
+                        html += `<div class="bg-white p-3 rounded-lg mb-2"><h4 class="font-bold text-red-800 text-sm">🚩 ${f.type}</h4><div class="bg-red-50 p-2 my-2 rounded text-sm"><p class="text-red-900">"${f.quote}"</p></div><p class="text-gray-800 text-sm">${f.explanation}</p></div>`;
+                    });
+                    html += '</div>';
+                }
+
+                if (a.understanding) html += `<div class="bg-blue-50 rounded-xl p-3"><h3 class="font-bold text-sm mb-1">${t[currentLang].understanding}</h3><p class="text-sm">${a.understanding}</p></div>`;
+                if (a.tone) html += `<div class="bg-purple-50 rounded-xl p-3"><h3 class="font-bold text-sm mb-1">${t[currentLang].tone}</h3><p class="text-sm">${a.tone}</p></div>`;
+                if (a.emotions_detected && a.emotions_detected.length > 0) {
+                    html += `<div class="bg-pink-50 rounded-xl p-3"><h3 class="font-bold text-sm mb-2">${t[currentLang].emotions}</h3><div class="flex flex-wrap gap-2">`;
+                    a.emotions_detected.forEach(e => html += `<span class="bg-pink-200 text-pink-800 px-2 py-1 rounded-full text-xs font-bold">${e}</span>`);
+                    html += '</div></div>';
+                }
+                if (a.improved_version) html += `<div class="bg-green-50 rounded-xl p-3 border-2 border-green-200"><h3 class="font-bold text-sm mb-2">${t[currentLang].improved}</h3><p class="bg-white p-3 rounded text-sm">${a.improved_version}</p></div>`;
+
+                html += `<button onclick="document.getElementById('personalText').value='';document.getElementById('personalResults').classList.add('hidden')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-xl text-sm">${t[currentLang].analyzeAnother}</button>`;
+                
+                document.getElementById('personalResults').innerHTML = html;
+                document.getElementById('personalResults').classList.remove('hidden');
+            } catch (error) {
+                alert('שגיאה: ' + error.message);
+            } finally {
+                btn.textContent = t[currentLang].analyzeBtn;
+                btn.disabled = false;
+            }
+        }
+
+        async function analyzeGroup() {
+            const text = document.getElementById('groupText').value.trim();
+            const named = participants.filter(p => p.name.trim());
+            if (!text || named.length < 2) { alert('הכנס טקסט ושמות'); return; }
+
+            const btn = document.getElementById('analyzeGroupBtn');
+            btn.textContent = t[currentLang].analyzing;
+            btn.disabled = true;
+
+            try {
+                const names = named.map(p => p.name).join(', ');
+                const prompt = `נתח שיחה קבוצתית. החזר JSON בלבד.\nמשתתפים: ${names}\nשיחה: "${text}"\nJSON: {"summary":"סיכום","red_flags":[{"type":"סוג","who":"מי","quote":"ציטוט","explanation":"הסבר","severity":"mild"}],"recommendations":["המלצה"]}`;
+
+                const a = await callAPI(prompt);
+                let html = `<h2 class="text-lg font-bold pb-3 border-b-2 border-indigo-100">✅ ${t[currentLang].results}</h2>`;
+                
+                if (a.summary) html += `<div class="bg-indigo-50 rounded-xl p-3"><p class="text-sm">${a.summary}</p></div>`;
+                
+                if (a.red_flags && a.red_flags.length > 0) {
+                    html += '<div class="bg-red-100 rounded-xl p-4 border-2 border-red-500"><h3 class="text-lg font-bold text-red-900 mb-3">🚨 ' + t[currentLang].redFlags + '</h3>';
+                    a.red_flags.forEach(f => {
+                        html += `<div class="bg-white p-3 rounded-lg mb-2"><h4 class="font-bold text-red-800 text-sm">🚩 ${f.type} <span class="bg-gray-700 text-white px-2 py-1 rounded-full text-xs">${f.who}</span></h4><div class="bg-red-50 p-2 my-2 rounded text-sm">"${f.quote}"</div><p class="text-gray-800 text-sm">${f.explanation}</p></div>`;
+                    });
+                    html += '</div>';
+                }
+
+                html += `<button onclick="document.getElementById('groupText').value='';document.getElementById('groupResults').classList.add('hidden')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 rounded-xl text-sm">${t[currentLang].analyzeAnother}</button>`;
+                
+                document.getElementById('groupResults').innerHTML = html;
+                document.getElementById('groupResults').classList.remove('hidden');
+            } catch (error) {
+                alert('שגיאה: ' + error.message);
+            } finally {
+                btn.textContent = t[currentLang].analyzeBtn;
+                btn.disabled = false;
+            }
+        }
+
+        // Init
+        const savedKey = localStorage.getItem('anthropic_api_key');
+        if (savedKey) {
+            API_KEY = savedKey;
+            document.getElementById('apiKeyModal').style.display = 'none';
+        }
+        renderParticipants();
+        updateTexts();
+    </script>
+</body>
+</html>
